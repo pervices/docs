@@ -1,0 +1,228 @@
+\documentclass[11pt]{article}
+%Gummi|065|=)
+\title{\textbf{Crimson's Server API}}
+\author{Howard Pang\\
+	howard.p@pervices.com}
+\date{Last Updated On: July 27th 2015}
+\usepackage{float}
+\usepackage{pdflscape}
+\usepackage{afterpage}
+\usepackage{caption}
+\usepackage{multirow}
+\usepackage{graphicx}
+\restylefloat{table}
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+\label{sec:introduction}
+A server runs on Crimson that services all UHD (USRP Hardware Driver) or custom programs from host machines. The server is invoked when the Linux OS exits boot, and the possible interfaces are:
+\begin{itemize}
+	\item UHD Driver (GNU Radio or C++)
+	\item Webserver located at 192.168.10.2 (default)
+	\item UDP packets to 192.168.10.2:42799 (default)
+\end{itemize}
+The instructions for the UHD Driver and Webserver interfaces are illustrated in the Crimson User Manual, however their functions are limited, thus it is advised to use UDP packets for advanced use cases.
+
+Any coding language that supports UDP transactions will be able to communicate with Crimson. The messages are implemented with strings. When writing your custom software to interface with Crimson, please double check the machine's network IP address and port numbers. It is important to note that some properties take extra time to update, if subsequent commands are sent in a fairly short time span, the server will drop the commands. Commands that power on channels take approximately 3 to 4s, and all other commands take approximately 0.1 to 0.7s.
+
+\section{Packet Structure}
+\label{sec:packet-structure}
+There are two different packet structures, one for transmit and one for receive. Table \ref{table:packet-structure} details the packet structure for the respective transactions. The packet contents are deliminated with commas (CSV) and the data field is optional depending on the property specified.
+
+\begin{table}[H]
+\centering
+\caption{Packet Structure}
+\label{table:packet-structure}
+\begin{tabular}{l|l|l|l|l|}
+\cline{2-5}
+{\bf Transmit} & Sequence Number & Operation & Property      & {[}Data{]}      \\ \cline{2-5} 
+{\bf Receive}  & Sequence Number & Operation & \multicolumn{2}{c|}{{[}Data{]}} \\ \cline{2-5} 
+\end{tabular}
+\end{table}
+
+The description of the fields in Table \ref{table:packet-structure} are described below:
+\begin{itemize}
+	\item[]{\bf Sequence No}: uint32\_t value to confirm corresponding acknowledge packets. Useful for UDP out-of-order messages.
+	\item[]{\bf Operation}: ''get'' or ''set''
+	\item[]{\bf Property}: Full property path, refer to the API section and concatenate '/' between directories.
+	\item[]{\bf Data}: String representation of the data, refer to Section \ref{sec:api} under the heading ''Function''
+	\item[]{\bf Status}: ''0'': no error, ''1'': error
+\end{itemize}
+
+\section{Examples}
+\label{sec:examples}
+This section will show two examples, one to set a property, and one to get a property.
+\begin{table}[H]
+\centering
+\caption{Set Property}
+\label{table:set-property}
+\begin{tabular}{l|l|l|l|l|}
+\cline{2-2}
+{\bf Step 1: Transmit (cmd)} & \multicolumn{1}{c|}{1,set,rx\_a/rf/gain/val,65} \\ \cline{2-2}
+{\bf Step 2: Receive (ack)}  & \multicolumn{1}{c|}{1,0}                        \\ \cline{2-2}
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Get Property}
+\label{table:get-property}
+\begin{tabular}{l|l|l|l|l|}
+\cline{2-2}
+{\bf Step 1: Transmit (cmd)} & \multicolumn{1}{c|}{78,get,rx\_a/rf/gain/val} \\ \cline{2-2}
+{\bf Step 2: Receive (ack)}  & \multicolumn{1}{c|}{78,0,65}                  \\ \cline{2-2} 
+\end{tabular}
+\end{table}
+
+\afterpage{%
+    \clearpage% Flush earlier floats (otherwise order might not be correct)
+    \thispagestyle{empty}% empty page style (?)
+    \begin{landscape}% Landscape page
+	    \section{API}
+		\label{sec:api}
+		The following pages will detail the possible properties that can be accessed with Crimson. TX and RX properties contain an additional channel field to the root path. Thus there tx\_a/pwr, ta\_b/pwr, tx\_c/pwr, and tx\_d/pwr. There are also additional notes to the properties as well, which are described here:
+\begin{itemize}
+	\item[]{\bf [1]}: This is a dual cycle read property. To read from it, you will need to first: write a 1 to the property first to tell the server to update the contents of the property, and then second: read the updated value from the property.
+\end{itemize}
+\begin{table}[H]
+\centering
+\small
+\caption{TX API Properties}
+\label{table:tx-api}
+\begin{tabular}{|c|c|c|c|c|c|l|}
+\hline
+\multicolumn{4}{|c|}{{\bf Property Path}}                                             & {\bf Permissions} & {\bf Notes} & \multicolumn{1}{c|}{{\bf Function}}                                   \\ \hline
+\multirow{25}{*}{TX}   & \multicolumn{3}{c|}{PWR}                                     & RW                &             & Power of DSP and RF chain (1) on, (0) off,  Resets all settings.      \\ \cline{2-7} 
+                       & \multirow{12}{*}{RF}    & \multirow{2}{*}{DAC}   & NCO       & RW                &             & DAC clock frequency (Mhz)                                             \\ \cline{4-7} 
+                       &                         &                        & TEMP      & RW                &             & Temperature of the DAC IC (Celcius)                                   \\ \cline{3-7} 
+                       &                         & \multirow{4}{*}{FREQ}  & VAL       & RO                & [1]         & Tune the RF chain to desired frequency (Hz)                           \\ \cline{4-7} 
+                       &                         &                        & BAND      & RW                &             & RF band that was chosen after tuning (1) High, (0) Low                \\ \cline{4-7} 
+                       &                         &                        & I\_BIAS   & RW                &             & Adjust I-bias (in 100mV's)                                            \\ \cline{4-7} 
+                       &                         &                        & Q\_BIAS   & RW                &             & Adjust Q-bias (in 100mV's)                                            \\ \cline{3-7} 
+                       &                         & GAIN                   & VAL       & RW                &             & Set RF chain gain (dB)                                                \\ \cline{3-7} 
+                       &                         & \multirow{5}{*}{BOARD} & STATUS    & RW                & [1]         & Not implemented Yet                                                   \\ \cline{4-7} 
+                       &                         &                        & DUMP      & WO                &             & Dump all of the registers of the device into /tmp/dump.txt            \\ \cline{4-7} 
+                       &                         &                        & TEST      & WO                &             & Not implemented Yet                                                   \\ \cline{4-7} 
+                       &                         &                        & TEMP      & RW                & [1]         & Temperature of the RF board (Celcius)                                 \\ \cline{4-7} 
+                       &                         &                        & LED       & WO                &             & Number of times to toggle the LED                                     \\ \cline{2-7} 
+                       & \multirow{4}{*}{DSP}    & \multicolumn{2}{c|}{GAIN}          & RW                &             & Not implemented Yet                                                   \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{RATE}          & RW                & {\bf }      & Sample Rate (SPS)                                                     \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{NCO\_ADJ}      & RW                &             & Frequency Mixing (Hz)                                                 \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{RSTREQ}        & WO                &             & Request a reset to the DSP chain                                      \\ \cline{2-7} 
+                       & \multirow{5}{*}{ABOUT}  & \multicolumn{2}{c|}{ID}            & RW                &             & ID of the TX board                                                    \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{SERIAL}        & RO                &             & Serial Number of the TX Board                                         \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{FW\_VER}       & RO                &             & Compilation Date of UHD Server                                        \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{HW\_VER}       & RO                &             & Compilation Date of UHD Server                                        \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{SW\_VER}       & RO                &             & Compilation Date of UHD Server                                        \\ \cline{2-7} 
+                       & \multirow{3}{*}{LINK}   & \multicolumn{2}{c|}{VITA\_EN}      & RW                &             & Enable VITA headers (1) or disable (0)                                \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{IFACE}         & RW                &             & Not implemented Yet (Refer to user manual for defaults)               \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{PORT}          & RW                &             & UDP port to receive from (host -\textgreater output packets)          \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\caption{RX API Properties}
+\label{table:rx-api}
+\begin{tabular}{|c|c|c|c|c|c|l|}
+\hline
+\multicolumn{4}{|c|}{{\bf Property Path}}                                             & {\bf Permissions} & {\bf Notes} & \multicolumn{1}{c|}{{\bf Function}}                                   \\ \hline
+\multirow{25}{*}{RX}   & \multicolumn{3}{c|}{PWR}                                     & RW                &             & Power of the DSP and RF chain (1) on, (0) off, Resets all settings    \\ \cline{2-7} 
+                       & \multirow{9}{*}{RF}     & \multirow{3}{*}{FREQ}  & VAL       & RW                &             & Tune the RF chain to desired frequency (Hz)                           \\ \cline{4-7} 
+                       &                         &                        & BAND      & RW                &             & RF band that was chosen after tuning (1) High, (0) Low                \\ \cline{4-7} 
+                       &                         &                        & LNA       & RW                &             & Bypass the LNA (1) Bypass, (0) LNA                                    \\ \cline{3-7} 
+                       &                         & GAIN                   & VAL       & RW                &             & Set RF chain gain (dB)                                                \\ \cline{3-7} 
+                       &                         & \multirow{5}{*}{BOARD} & STATUS    & RW                & [1]         & Not implemented Yet                                                   \\ \cline{4-7} 
+                       &                         &                        & DUMP      & WO                &             & Dump all of the registers of the device into /tmp/dump.txt            \\ \cline{4-7} 
+                       &                         &                        & TEST      & WO                &             & Not implemented Yet                                                   \\ \cline{4-7} 
+                       &                         &                        & TEMP      & RW                & [1]         & Temperature of the RF board (Celcius)                                 \\ \cline{4-7} 
+                       &                         &                        & LED       & WO                &             & Number of times to toggle the LED                                     \\ \cline{2-7} 
+                       & \multirow{5}{*}{DSP}    & \multicolumn{2}{c|}{SIGNED}        & RW                &             & DSP output to be signed (1) or unsigned (0)                           \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{GAIN}          & RW                &             & Not implemented Yet                                                   \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{RATE}          & RW                &             & Sample Rate (SPS)                                                     \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{NCO\_ADJ}      & RW                &             & Frequency Mixing (Hz)                                                 \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{RSTREQ}        & WO                &             & Request a reset to the DSP chain                                      \\ \cline{2-7} 
+                       & \multirow{5}{*}{ABOUT}  & \multicolumn{2}{c|}{ID}            & RW                &             & ID of the TX board                                                    \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{SERIAL}        & RO                &             & Serial Number of the TX Board                                         \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{FW\_VER}       & RO                &             & Compilation Date of UHD Server                                        \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{HW\_VER}       & RO                &             & Compilation Date of UHD Server                                        \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{SW\_VER}       & RO                &             & Compilation Date of UHD Server                                        \\ \cline{2-7} 
+                       & \multirow{5}{*}{LINK}   & \multicolumn{2}{c|}{VITA\_EN}      & RW                &             & Enable VITA headers (1) or disable (0)                                \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{IFACE}         & RW                &             & Not implemented Yet (Refer to user manual for defaults)               \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{PORT}          & RW                &             & UDP port to transmit to (port for host to listen to)                  \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{IP\_DEST}      & RW                &             & IP address to transmit to (address of host)                           \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{MAC\_DEST}     & RW                &             & MAC address to transmit to (address of host)                          \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Time API Properties}
+\label{table:time-api}
+\begin{tabular}{|c|c|c|c|c|c|l|}
+\hline
+\multicolumn{4}{|c|}{{\bf Property Path}}                                             & {\bf Permissions} & {\bf Notes} & \multicolumn{1}{c|}{{\bf Function}}                                   \\ \hline
+\multirow{15}{*}{TIME} & \multirow{2}{*}{CLK}    & \multicolumn{2}{c|}{PPS}           & RW                &             & Not implemented Yet                                                   \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{CUR\_TIME}     & RW                & [1]         & Current time of Crimson                                               \\ \cline{2-7} 
+                       & \multirow{3}{*}{SOURCE} & \multicolumn{2}{c|}{VCO}           & RW                &             & VCO clock source (internal/external)                                  \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{SYNC}          & RW                &             & Sync clock source (internal/external)                                 \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{REF}           & RW                &             & Ref clock source (internal/external)                                  \\ \cline{2-7} 
+                       & \multirow{5}{*}{BOARD}  & \multicolumn{2}{c|}{STATUS}        & RW                & [1]         & Not implemented Yet                                                   \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{DUMP}          & WO                &             & Dump all of the registers of the device into /tmp/dump.txt            \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{TEST}          & WO                &             & Not implemented Yet                                                   \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{TEMP}          & RW                & [1]         & Temperature of the RF board (Celcius)                                 \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{LED}           & WO                &             & Number of times to toggle the LED                                     \\ \cline{2-7} 
+                       & \multirow{5}{*}{ABOUT}  & \multicolumn{2}{c|}{ID}            & RW                &             & ID of the Time board                                                  \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{SERIAL}        & RO                &             & Serial Number of the Time Board                                       \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{FW\_VER}       & RO                &             & Compilation Date of UHD Server                                        \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{HW\_VER}       & RO                &             & Compilation Date of UHD Server                                        \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{SW\_VER}       & RO                &             & Compilation Date of UHD Server                                        \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\caption{FPGA API Properties}
+\label{table:fpga-api}
+\begin{tabular}{|c|c|c|c|c|c|l|}
+\hline
+\multicolumn{4}{|c|}{{\bf Property Path}}                                             & {\bf Permissions} & {\bf Notes} & \multicolumn{1}{c|}{{\bf Function}}                                   \\ \hline
+\multirow{25}{*}{FPGA} & \multirow{8}{*}{BOARD}  & \multicolumn{2}{c|}{STATUS}        & RW                & [1]         & Not implemented Yet                                                   \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{DUMP}          & WO                &             & Dump all of the registers of the device into /tmp/dump.txt            \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{TEST}          & WO                &             & Not implemented Yet                                                   \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{TEMP}          & RW                & [1]         & Temperature of the RF board (Celcius)                                 \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{LED}           & WO                &             & Number of times to toggle the LED                                     \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{RSTREQ}        & WO                &             & Request a reset to the FPGA                                           \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{JESD\_RSTREQ}  & WO                &             & Request a reset to the JESD link                                      \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{SYS\_RSTREQ}   & WO                &             & Request a reset to entire Crimson                                     \\ \cline{2-7} 
+                       & \multirow{5}{*}{ABOUT}  & \multicolumn{2}{c|}{ID}            & RW                &             & ID of the FPGA board                                                  \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{SERIAL}        & RO                &             & Serial Number of the FPGA Board                                       \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{FW\_VER}       & RO                &             & FW Version on the FPGA DSP chain                                      \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{HW\_VER}       & RO                &             & HW version of the FPGA Board                                          \\ \cline{3-7} 
+                       &                         & \multicolumn{2}{c|}{SW\_VER}       & RO                &             & SW version of the FPGA Board                                          \\ \cline{2-7} 
+                       & \multirow{12}{*}{LINK}  & \multicolumn{2}{c|}{RATE}          & RW                &             & Not implemented Yet                                                   \\ \cline{3-7} 
+                       &                         & \multirow{4}{*}{SFPA}  & IP\_ADDR  & RW                &             & IP Address of SFPA port (host -> output packets)  \\ \cline{4-7} 
+                       &                         &                        & MAC\_ADDR & RW                &             & MAC Address of SFPA port (host -> output packets) \\ \cline{4-7} 
+                       &                         &                        & VER       & RW                &             & IP protocol version (1) IPV6 (0) IPV4                                 \\ \cline{4-7} 
+                       &                         &                        & PAY\_LEN  & RW                &             & Payload Len (bytes)                                                   \\ \cline{3-7} 
+                       &                         & \multirow{4}{*}{SFPB}  & IP\_ADDR  & RW                &             & IP Address of SFPA port (host -> output packets)  \\ \cline{4-7} 
+                       &                         &                        & MAC\_ADDR & RW                &             & MAC Address of SFPB port (host -> output packets to) \\ \cline{4-7} 
+                       &                         &                        & VER       & RW                &             & IP protocol version (1) IPV6 (0) IPV4                                 \\ \cline{4-7} 
+                       &                         &                        & PAY\_LEN  & RW                &             & Payload Len (bytes)                                                   \\ \cline{3-7} 
+                       &                         & \multirow{3}{*}{NET}   & DHCP\_EN  & RW                &             & Not implemented Yet                                                   \\ \cline{4-7} 
+                       &                         &                        & HOSTNAME  & RW                &             & Name of Crimson                                                       \\ \cline{4-7} 
+                       &                         &                        & IP\_ADDR  & RW                &             & IP Address of Management Port                                         \\ \hline
+\end{tabular}
+\end{table}
+
+
+    \end{landscape}
+    \clearpage% Flush page
+}
+
+\end{document}
