@@ -1,0 +1,69 @@
+\documentclass[11pt]{article}
+%Gummi|065|=)
+\title{\textbf{Setting up OpenBTS on Crimson}}
+\author{Howard Pang\\
+	howard.p@pervices.com}
+\date{Last Updated On: August 10th 2015}
+\usepackage{float}
+\usepackage{pdflscape}
+\usepackage{afterpage}
+\usepackage{caption}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{courier}
+\restylefloat{table}
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+It is required to setup OpenBTS using a combination of Per Vices forks. The following instructions are meant as a reference for copying and pasting. It should only be used only if the user has a general understanding of building OpenBTS. For further understanding on the instructions, please visit:
+\begin{itemize}
+	\item UHD: http://files.ettus.com/manual/page\_build\_guide.html
+	\item OpenBTS: http://openbts.org/w/index.php/BuildInstallRun
+\end{itemize}
+
+\section{Instructions}
+	\begin{enumerate}
+	\item Install all dependencies, get the source, build, and install UHD:
+	\begin{itemize}
+		\item \texttt{sudo apt-get install libboost-all-dev libusb-1.0-0-dev python-cheetah doxygen python-docutils cmake}
+		\item \texttt{git clone https://github.com/pervices/uhd.git}
+		\item \texttt{cd uhd/host/}
+		\item \texttt{mkdir build}
+		\item \texttt{cd build}
+		\item \texttt{cmake ../}
+		\item \texttt{make}
+		\item \texttt{make test}
+		\item \texttt{sudo make install}
+		\item \texttt{sudo ldconfig}
+	\end{itemize}		
+	\item Install all dependencies, get the source, build, and install OpenBTS:
+	\begin{itemize}
+		\item \texttt{sudo apt-get install autoconf libtool libosip2-dev libortp-dev libusb-1.0-0-dev g++ sqlite3 libsqlite3-dev erlang libreadline6-dev libncurses5-dev}
+		\item \texttt{git clone https://github.com/RangeNetworks/dev.git}
+		\item \texttt{cd dev/}
+		\item \texttt{./clone.sh}
+		\item \texttt{cd a53/trunk}
+		\item \texttt{sudo make install}
+		\item \texttt{cd ../../}
+		\item Exchange openbts with Per Vices fork:
+		\begin{enumerate}
+			\item \texttt{rm -rf openbts}
+			\item \texttt{git clone https://github.com/pervices/openbts.git}
+		\end{enumerate}
+		\item \texttt{cd openbts/}
+		\item \texttt{git submodule init; git submodule update}
+		\item \texttt{./autogen.sh}
+		\item \texttt{./configure --with-uhd}
+		\item \texttt{make}
+		\item \texttt{sudo make install}
+		\item \texttt{cd apps}
+		\item \texttt{ln -s ../Transceiver52/transceiver ./}
+		\item \texttt{sudo mkdir /etc/OpenBTS}
+		\item \texttt{sudo sqlite3 -init OpenBTS.example.sql /etc/OpenBTS/OpenBTS.db ".quit"}
+	\end{itemize}
+	\item Install and configure Smqueue, Sipauthserve, Subscriber Registry, and Asterisk. http://openbts.org/w/index.php/BuildInstallRun	
+	\end{enumerate}
+
+\end{document}

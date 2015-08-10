@@ -94,7 +94,7 @@ This section will show two examples, one to set a property, and one to get a pro
 \begin{tabular}{|c|c|c|c|c|c|l|}
 \hline
 \multicolumn{4}{|c|}{{\bf Property Path}}                                             & {\bf Permissions} & {\bf Notes} & \multicolumn{1}{c|}{{\bf Function}}                                   \\ \hline
-\multirow{25}{*}{TX}   & \multicolumn{3}{c|}{PWR}                                     & RW                &             & Power of DSP and RF chain (1) on, (0) off,  Resets all settings.      \\ \cline{2-7} 
+\multirow{25}{*}{TX\_A}   & \multicolumn{3}{c|}{PWR}                                     & RW                &             & Power of DSP and RF chain (1) on, (0) off,  Resets all settings.      \\ \cline{2-7} 
                        & \multirow{12}{*}{RF}    & \multirow{2}{*}{DAC}   & NCO       & RW                &             & DAC clock frequency (Mhz)                                             \\ \cline{4-7} 
                        &                         &                        & TEMP      & RW                &             & Temperature of the DAC IC (Celcius)                                   \\ \cline{3-7} 
                        &                         & \multirow{4}{*}{FREQ}  & VAL       & RO                & [1]         & Tune the RF chain to desired frequency (Hz)                           \\ \cline{4-7} 
@@ -130,7 +130,7 @@ This section will show two examples, one to set a property, and one to get a pro
 \begin{tabular}{|c|c|c|c|c|c|l|}
 \hline
 \multicolumn{4}{|c|}{{\bf Property Path}}                                             & {\bf Permissions} & {\bf Notes} & \multicolumn{1}{c|}{{\bf Function}}                                   \\ \hline
-\multirow{25}{*}{RX}   & \multicolumn{3}{c|}{PWR}                                     & RW                &             & Power of the DSP and RF chain (1) on, (0) off, Resets all settings    \\ \cline{2-7} 
+\multirow{25}{*}{RX\_A}   & \multicolumn{3}{c|}{PWR}                                     & RW                &             & Power of the DSP and RF chain (1) on, (0) off, Resets all settings    \\ \cline{2-7} 
                        & \multirow{9}{*}{RF}     & \multirow{3}{*}{FREQ}  & VAL       & RW                &             & Tune the RF chain to desired frequency (Hz)                           \\ \cline{4-7} 
                        &                         &                        & BAND      & RW                &             & RF band that was chosen after tuning (1) High, (0) Low                \\ \cline{4-7} 
                        &                         &                        & LNA       & RW                &             & Bypass the LNA (1) Bypass, (0) LNA                                    \\ \cline{3-7} 
